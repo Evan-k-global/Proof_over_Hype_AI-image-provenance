@@ -13,6 +13,17 @@
 - [Deploy to Render](https://render.com/deploy)
 - [Deploy to Railway](https://railway.app/new)
 
+**Demo limits**
+- Public demo usage is limited to **3 analyses per IP per day**.
+- Users can bypass limits by supplying their own detector API keys in the UI.
+- Optional hCaptcha support is available for public demos.
+
+**Live demo**
+- https://proof-over-hype-ai-image-provenance.onrender.com
+
+Detector keys can be obtained from:
+- Sightengine: https://sightengine.com
+
 A minimal demo app that:
 
 - Accepts a web page URL
@@ -86,8 +97,19 @@ npm run dev
 
 This repo **never** ships private keys or API keys. You must supply your own:
 
-- AI detector API keys (Sightengine or DetectAIImage)
+- AI detector API keys (Sightengine)
 - Zeko/Mina keys (oracle, deployer, submitter, zkApp)
+
+## Optional: Captcha (public demo)
+
+For public demos, you can enable hCaptcha:
+
+```bash
+export HCAPTCHA_SITE_KEY=your_site_key
+export HCAPTCHA_SECRET=your_secret
+```
+
+If hCaptcha is not set, the demo will run without it (and rely on IP limits).
 
 Create your `.env` from the template:
 
@@ -149,14 +171,7 @@ export AI_DETECTOR_SECRET=your_api_secret
 
 The server sends the image URL to Sightengine's `genai` model.
 
-### Option B: Detect AI Image
-
-```bash
-export AI_DETECTOR_PROVIDER=detectaiimage
-export AI_DETECTOR_KEY=your_api_key_here
-```
-
-The server POSTs the image bytes to the detector and uses its result.
+The server uses Sightengine’s `genai` model for AI image detection.
 
 ## ZK proof oracle key
 

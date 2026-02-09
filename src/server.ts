@@ -30,6 +30,22 @@ const port = process.env.PORT ? Number(process.env.PORT) : 5173;
 const merklePath = path.join(process.cwd(), 'data', 'merkle.json');
 const proofPath = path.join(process.cwd(), 'data', 'proofs.json');
 const merkleHeight = 20;
+const demoDailyLimit = 3;
+const demoCounts = new Map<string, { count: number; resetAt: number }>();
+
+async function verifyCaptcha(token: string | undefined): Promise<boolean> {
+  const secret = process.env.HCAPTCHA_SECRET;
+  if (!secret) return true;
+  if (!token) return false;
+  const body = new URLSearchParams({ response: token, secret }).toString();
+  const res = await fetch('https://hcaptcha.com/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const json = (await res.json()) as { success?: boolean };
+  return Boolean(json?.success);
+}
 
 process.on('uncaughtException', (err) => {
   console.error('Uncaught exception:', err);
@@ -89,6 +105,33 @@ function getOracleKey(): PrivateKey {
     oracleKey = PrivateKey.random();
   }
   return oracleKey;
+}
+
+function getClientIp(req: express.Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return forwarded[0];
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function checkDemoLimit(req: express.Request) {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const entry = demoCounts.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    demoCounts.set(ip, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 });
+    return { allowed: true, remaining: demoDailyLimit - 1, resetAt: now + 24 * 60 * 60 * 1000 };
+  }
+  if (entry.count >= demoDailyLimit) {
+    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
+  }
+  entry.count += 1;
+  demoCounts.set(ip, entry);
+  return { allowed: true, remaining: demoDailyLimit - entry.count, resetAt: entry.resetAt };
 }
 
 async function ensureCompiled() {
@@ -684,7 +727,44 @@ app.post('/analyze', async (req, res) => {
     console.log('[detect] content-type:', imageData.contentType, 'size:', imageData.size);
     const imageHash = hashToField(imageData.buffer);
 
-    const classification = await detectAiImage(imageData.buffer, selectedImage, imageData.contentType);
+    const override =
+      req.body?.apiUser || req.body?.apiSecret
+        ? {
+            provider: 'sightengine',
+            apiUser: req.body?.apiUser,
+            apiSecret: req.body?.apiSecret
+          }
+        : undefined;
+
+    let remaining: number | null = null;
+    let resetAt: number | null = null;
+    if (!override) {
+      const limit = checkDemoLimit(req);
+      remaining = limit.remaining;
+      resetAt = limit.resetAt;
+      if (!limit.allowed) {
+        return res.status(429).json({
+          error: 'Daily demo limit reached. Add your own API key to continue.',
+          remaining,
+          resetAt
+        });
+      }
+      const captchaOk = await verifyCaptcha(req.body?.captchaToken);
+      if (!captchaOk) {
+        return res.status(429).json({
+          error: 'Captcha required for public demo usage.',
+          remaining,
+          resetAt
+        });
+      }
+    }
+
+    const classification = await detectAiImage(
+      imageData.buffer,
+      selectedImage,
+      imageData.contentType,
+      override
+    );
     const merkleAppend = await prepareLeaf(imageHash, new Bool(classification.verdict));
     const { proof, oraclePub, signature, input } = await generateProof(
       imageHash,
@@ -709,6 +789,7 @@ app.post('/analyze', async (req, res) => {
       verdict: classification.verdict,
       confidence: classification.confidence,
       method: classification.method,
+      demo: remaining !== null ? { remaining, resetAt, limit: demoDailyLimit } : null,
       zk: {
         imageHash: imageHash.toString(),
         oraclePublicKey: oraclePub.toBase58(),
@@ -1164,6 +1245,13 @@ app.post('/tx', async (req, res) => {
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(400).json({ error: message });
   }
+});
+
+app.get('/config', (req, res) => {
+  res.json({
+    demoDailyLimit,
+    hcaptchaSiteKey: process.env.HCAPTCHA_SITE_KEY || null
+  });
 });
 
 app.listen(port, () => {

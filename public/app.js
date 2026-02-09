@@ -15,6 +15,8 @@ const checkNonceButton = document.getElementById('check-nonce');
 const checkMempoolButton = document.getElementById('check-mempool');
 const checkStatusButton = document.getElementById('check-status');
 const skipSvgToggle = document.getElementById('skip-svg');
+const sightengineUser = document.getElementById('sightengine-user');
+const sightengineSecret = document.getElementById('sightengine-secret');
 const verifyUrlInput = document.getElementById('verify-url');
 const verifyImagesButton = document.getElementById('verify-images-btn');
 const verifyUrlButton = document.getElementById('verify-url-btn');
@@ -34,6 +36,7 @@ const proofResultEl = document.getElementById('proof-result');
 const proofBadgeEl = document.getElementById('proof-badge');
 const proofPreviewEl = document.getElementById('proof-preview');
 const verifyPreviewEl = document.getElementById('verify-preview');
+const demoRemainingEl = document.getElementById('demo-remaining');
 
 let lastProof = null;
 let lastTxHash = null;
@@ -42,6 +45,58 @@ let selectedImageUrl = null;
 let lastAnalyzePayload = null;
 let verifyImages = [];
 let selectedVerifyImageUrl = null;
+let captchaToken = null;
+let hcaptchaSiteKey = null;
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/config');
+    if (!res.ok) return;
+    const data = await res.json();
+    hcaptchaSiteKey = data.hcaptchaSiteKey;
+    if (demoRemainingEl && data.demoDailyLimit) {
+      demoRemainingEl.textContent = `Demo remaining: ${data.demoDailyLimit} / ${data.demoDailyLimit}`;
+    }
+    if (hcaptchaSiteKey) {
+      const script = document.createElement('script');
+      script.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (window.hcaptcha) {
+          const container = document.createElement('div');
+          container.style.display = 'none';
+          document.body.appendChild(container);
+          window.hcaptcha.render(container, {
+            sitekey: hcaptchaSiteKey,
+            callback: (token) => {
+              captchaToken = token;
+            },
+            'expired-callback': () => {
+              captchaToken = null;
+            }
+          });
+        }
+      };
+      document.head.appendChild(script);
+    }
+  } catch {
+    // ignore config errors
+  }
+}
+
+loadByok();
+loadConfig();
+
+function loadByok() {
+  if (sightengineUser) sightengineUser.value = localStorage.getItem('sightengineUser') || '';
+  if (sightengineSecret) sightengineSecret.value = localStorage.getItem('sightengineSecret') || '';
+}
+
+function saveByok() {
+  if (sightengineUser) localStorage.setItem('sightengineUser', sightengineUser.value.trim());
+  if (sightengineSecret) localStorage.setItem('sightengineSecret', sightengineSecret.value.trim());
+}
 
 function setVerdict({ verdict, confidence, method }) {
   if (verdict === null || verdict === undefined) {
@@ -184,6 +239,7 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const url = urlInput.value.trim();
   if (!url) return;
+  saveByok();
 
   verdictEl.textContent = 'Fetching images...';
   confidenceEl.textContent = '';
@@ -204,6 +260,11 @@ form.addEventListener('submit', async (event) => {
     }
 
     const data = await response.json();
+    if (demoRemainingEl && data.demo?.remaining !== undefined) {
+      const remaining = data.demo.remaining;
+      const limit = data.demo.limit ?? remaining;
+      demoRemainingEl.textContent = `Demo remaining: ${Math.max(remaining, 0)} / ${limit}`;
+    }
     lastImages = data.images || [];
     renderImages(lastImages);
     verdictEl.textContent = 'Select an image, then analyze.';
@@ -227,7 +288,12 @@ form.addEventListener('submit', async (event) => {
 async function runAnalysis() {
   const url = urlInput.value.trim();
   if (!url || !selectedImageUrl) return;
-  lastAnalyzePayload = { url, imageUrl: selectedImageUrl };
+  const apiPayload = {
+    provider: 'sightengine',
+    apiUser: sightengineUser?.value.trim() || undefined,
+    apiSecret: sightengineSecret?.value.trim() || undefined
+  };
+  lastAnalyzePayload = { url, imageUrl: selectedImageUrl, ...apiPayload, captchaToken };
 
   verdictEl.textContent = 'Analyzing selected image...';
   confidenceEl.textContent = '';
@@ -274,6 +340,9 @@ retryButton.addEventListener('click', () => {
     runAnalysis();
   }
 });
+
+sightengineUser?.addEventListener('input', saveByok);
+sightengineSecret?.addEventListener('input', saveByok);
 
 submitButton.addEventListener('click', async () => {
   if (!lastProof) return;

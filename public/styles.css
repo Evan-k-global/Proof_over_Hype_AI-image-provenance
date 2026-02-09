@@ -141,6 +141,33 @@ button:disabled {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.byok-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #0c0f15;
+}
+
+.byok-inline span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.byok-inline input {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #10141c;
+  color: var(--text);
+  font-size: 0.9rem;
+  min-width: 180px;
 }
 
 .toggle {
@@ -344,6 +371,47 @@ summary {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.byok {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #0c0f15;
+}
+
+.byok-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.byok label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.byok input,
+.byok select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #10141c;
+  color: var(--text);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 8px 0 0;
+}
+
+.captcha {
+  min-height: 78px;
+  display: grid;
+  align-items: center;
 }
 
 .summary-preview {

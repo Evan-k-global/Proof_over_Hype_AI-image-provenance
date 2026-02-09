@@ -41,6 +41,16 @@
           <button id="analyze-selected" type="button" disabled>Analyze Selected</button>
           <button id="retry-analyze" type="button" disabled>Retry</button>
           <button id="submit-zeko" type="button" disabled>Submit to Zeko</button>
+          <div class="byok-inline">
+            <span>Use your own API key (optional)</span>
+            <input id="sightengine-user" type="text" placeholder="Sightengine API user" />
+            <input id="sightengine-secret" type="password" placeholder="Sightengine API secret" />
+          </div>
+        </div>
+        <div class="hint">
+          <span id="demo-remaining">Demo remaining: —</span>
+          <span> · Resets every 24h. If you add your own key, you won’t hit the public demo limits. Get keys from </span>
+          <a href="https://sightengine.com/" target="_blank" rel="noreferrer">Sightengine</a>.
         </div>
       </section>
 
@@ -94,7 +104,10 @@
 
       <section class="section-heading">
         <h2>2) Verify Image</h2>
-        <p>Use this to check if a specific image hash is verifiably anchored to a proof.</p>
+        <p>
+          Use this to check if a specific image hash is verifiably anchored to a proof.
+          <strong>No API key is needed to verify if an image has already been anchored to a Zeko proof.</strong>
+        </p>
       </section>
 
       <section class="panel">
