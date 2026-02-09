@@ -1,6 +1,6 @@
 # AI Image Verdict ZK (Demo)
 
-CI workflow: `.github/workflows/ci.yml`
+[![CI](https://github.com/Evan-k-global/Proof_over_Hype_AI-image-provenance/actions/workflows/ci.yml/badge.svg)](https://github.com/Evan-k-global/Proof_over_Hype_AI-image-provenance/actions/workflows/ci.yml)
 
 **Quick Start**
 1. `cp .env.example .env`
