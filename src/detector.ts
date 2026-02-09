@@ -38,9 +38,17 @@ async function detectWithSightengine(imageUrl: string, apiUser: string, apiSecre
     // ignore parse errors
   }
 
-  if (!res.ok) {
-    const detail = json?.error || json?.message || text || res.status;
-    throw new Error(`Detector error: ${detail}`);
+  const errorDetail =
+    json?.error
+      ? typeof json.error === 'string'
+        ? json.error
+        : JSON.stringify(json.error)
+      : json?.message
+        ? json.message
+        : text || res.status;
+
+  if (!res.ok || json?.status === 'failure') {
+    throw new Error(`Detector error: ${errorDetail}`);
   }
 
   const rawScore = json?.type?.ai_generated ?? json?.type?.genai;
