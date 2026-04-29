@@ -18,11 +18,12 @@
 - Users can bypass limits by supplying their own detector API keys in the UI.
 - Optional hCaptcha support is available for public demos.
 
-**Live demo**
-- https://proof-over-hype-ai-image-provenance.onrender.com
-
 **Demo video**
 - `assets/Proof_over_Hype-demo.mov`
+
+**Agent skills**
+- Reusable playbooks live in `/Users/evankereiakes/Documents/Codex/app/agent_skills`
+- These cover Auro signing preflight, Zeko non-magic fee-payer flow, redeploy key consistency, image canonicalization, historical Merkle verification, and secure public demo packaging.
 
 Detector keys can be obtained from:
 - Sightengine: https://sightengine.com
